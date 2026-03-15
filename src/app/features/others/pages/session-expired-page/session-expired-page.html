@@ -1,0 +1,26 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+    <div class="text-center">
+      <!-- Icono de reloj o alerta (opcional) -->
+      <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+        <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">
+        ¡Sesión expirada!
+      </h2>
+
+      <p class="text-gray-600 mb-6">
+        Han pasado 5 minutos de inactividad, tu sesión ha sido cerrada por seguridad.
+      </p>
+
+      <button (click)="goToLogin()"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 ease-in-out transform hover:scale-105">
+        Ir al login
+      </button>
+    </div>
+  </div>
+</div>

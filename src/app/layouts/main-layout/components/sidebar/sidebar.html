@@ -1,0 +1,29 @@
+<button (click)="toggleMenu()" class="p-4 bg-blue-600 text-white fixed top-4 left-4 z-50 rounded-lg">
+  <span class="material-icons">menu</span>
+</button>
+
+
+@if(isOpen()){
+  <div (click)="toggleMenu()" class="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"></div>
+}
+
+
+<aside [ngClass]="isOpen() ? 'translate-x-0' : '-translate-x-full'"
+       class="fixed top-0 left-0 z-50 w-64 h-screen transition-transform duration-300 ease-in-out bg-white shadow-xl">
+
+  <div class="p-6">
+    <h2 class="text-2xl font-bold text-gray-800">Mi App</h2>
+
+    <nav class="mt-10 space-y-4">
+      <a routerLink="/dashboard" class="block py-2 px-4 hover:bg-gray-100 rounded">Inicio</a>
+
+      <div class="border-t pt-4 mt-4">
+        <button routerLink="/settings/profile" (click)="toggleMenu()"
+                class="w-full flex items-center p-3 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100">
+          <span class="material-icons mr-2">person</span>
+          Ver Perfil
+        </button>
+      </div>
+    </nav>
+  </div>
+</aside>

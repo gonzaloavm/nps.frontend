@@ -1,0 +1,35 @@
+<div class="vote-container">
+  @if (alreadyVoted()) {
+    <h2>Ya has emitido tu voto</h2>
+    <p>Gracias por participar.</p>
+    <button (click)="logout()">Cerrar sesión</button>
+  } @else if (voteSubmitted()) {
+    <h2>¡Voto registrado!</h2>
+    <p>Tu opinión es muy importante para nosotros.</p>
+    <button (click)="logout()">Cerrar sesión</button>
+  } @else {
+    <h1>¿Cuán probable es que recomiende nuestro servicio a un familiar o amigo?</h1>
+    <div class="scale">
+      @for (score of scores; track score) {
+        <button
+          class="score-btn"
+          [class.selected]="selectedScore() === score"
+          (click)="selectScore(score)"
+        >
+          {{ score }}
+        </button>
+      }
+    </div>
+    <div class="labels">
+      <span>Muy improbable</span>
+      <span>Definitivamente lo recomendaría</span>
+    </div>
+    <button
+      class="submit-btn"
+      [disabled]="selectedScore() === null"
+      (click)="submitVote()"
+    >
+      Enviar voto
+    </button>
+  }
+</div>

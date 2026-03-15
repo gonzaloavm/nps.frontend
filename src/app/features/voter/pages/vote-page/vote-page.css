@@ -1,0 +1,35 @@
+.vote-container {
+  text-align: center;
+  padding: 2rem;
+}
+.scale {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 2rem 0;
+}
+.score-btn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+.score-btn.selected {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+.labels {
+  display: flex;
+  justify-content: space-between;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.submit-btn {
+  margin-top: 2rem;
+  padding: 0.75rem 2rem;
+  font-size: 1.1rem;
+}
