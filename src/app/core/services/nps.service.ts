@@ -9,8 +9,10 @@ import { handleApiError } from '../utils/api-utils';
 @Injectable({ providedIn: 'root' })
 export class NpsService {
   private readonly http = inject(HttpClient);
-
-  private readonly baseUrl = `${environment.apiUrl}/api/nps`;
+  
+  private get baseUrl() {
+    return `${environment.apiUrl}/api/nps`;
+  }
 
   // ==================================================
   // Consultas de Datos

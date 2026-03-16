@@ -9,7 +9,10 @@ import { CreateVoteRequest, CreateVoteResponse, HasVotedResponse } from '../mode
 @Injectable({ providedIn: 'root' })
 export class VoteService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiUrl}/api/vote`;
+
+  private get baseUrl() {
+    return `${environment.apiUrl}/api/vote`;
+  }
 
   // Estado de Votación (Signals)
   public hasVoted = signal<boolean>(false);

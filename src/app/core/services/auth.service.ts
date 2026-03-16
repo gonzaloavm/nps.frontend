@@ -22,7 +22,10 @@ export class AuthService {
 
   private readonly TOKEN_KEY = 'auth_token';
   private readonly LOGOUT_KEY = 'nps_logout_signal';
-  private readonly baseUrl = `${environment.apiUrl}/api/auth`;
+
+  private get baseUrl() {
+    return `${environment.apiUrl}/api/auth`;
+  }
 
   // ==================================================
   // Estado Reactivo (Signals)
