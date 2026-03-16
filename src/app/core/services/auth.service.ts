@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap, map, catchError, finalize } from 'rxjs';
+import { Observable, tap, map, catchError } from 'rxjs';
 import {
   LoginResponse,
   RefreshSessionResponse,
@@ -15,20 +15,20 @@ import { handleApiError } from '../utils/api-utils';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-model';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+
   private readonly TOKEN_KEY = 'auth_token';
   private readonly LOGOUT_KEY = 'nps_logout_signal';
+  private readonly baseUrl = `${environment.apiUrl}/api/auth`;
 
-  private get baseUrl() {
-    return `${environment.apiUrl}/api/auth`;
-  }
-
+  // ==================================================
+  // Estado Reactivo (Signals)
+  // ==================================================
   private readonly _accessToken = signal<string | null>(this.getInitialToken());
+  public readonly accessToken = this._accessToken.asReadonly();
 
   public readonly currentUser = computed(() => {
     const token = this._accessToken();
@@ -41,15 +41,19 @@ export class AuthService {
     }
   });
 
-  public readonly accessToken = this._accessToken.asReadonly();
-
   constructor() {
+    // Sincronizar Signal con LocalStorage
     effect(() => {
       const token = this._accessToken();
-      if (token) localStorage.setItem(this.TOKEN_KEY, token);
-      else localStorage.removeItem(this.TOKEN_KEY);
+      token
+        ? localStorage.setItem(this.TOKEN_KEY, token)
+        : localStorage.removeItem(this.TOKEN_KEY);
     });
   }
+
+  // ==================================================
+  // Ciclo de Vida e Inicialización
+  // ==================================================
 
   initAuth(): Promise<void> {
     return new Promise((resolve) => {
@@ -57,13 +61,16 @@ export class AuthService {
         resolve();
         return;
       }
-
       this.refreshSession().subscribe({
         next: () => resolve(),
         error: () => resolve()
       });
     });
   }
+
+  // ==================================================
+  // Acciones de Autenticación (API)
+  // ==================================================
 
   login(credentials: LoginRequest): Observable<void> {
     return this.http.post<ApiResponse<LoginResponse>>(
@@ -72,7 +79,6 @@ export class AuthService {
       { withCredentials: true }
     ).pipe(
       tap(res => {
-        // LoginResponse puede exponer token o jwt según tu DTO
         const token = (res.data as any)?.token ?? (res.data as any)?.jwt;
         if (token) this._accessToken.set(token);
       }),
@@ -86,7 +92,6 @@ export class AuthService {
       `${this.baseUrl}/register`,
       userData
     ).pipe(
-      map(res => res),
       catchError(handleApiError)
     );
   }
@@ -106,9 +111,7 @@ export class AuthService {
   }
 
   verifySession(): Observable<ApiResponse<boolean>> {
-    // Agregamos un parámetro aleatorio para que el navegador no cachee el GET
     const cacheBuster = new Date().getTime();
-
     return this.http.get<ApiResponse<boolean>>(
       `${this.baseUrl}/verify-session?t=${cacheBuster}`,
       { withCredentials: true }
@@ -117,29 +120,43 @@ export class AuthService {
     );
   }
 
+  // ==================================================
+  // Gestión de Sesión Local
+  // ==================================================
+
   logout(redirectUrl: string = '/login'): void {
-    // Limpiamos los tokens
-    this._accessToken.set(null);
-    localStorage.removeItem('token');
-
-    // Emitimos la señal para las demás pestañas
-    // Siempre se dispara por el Timestampo
+    this.clearLocalSession();
+    // Notificar cierre a otras pestañas mediante Timestamp
     localStorage.setItem(this.LOGOUT_KEY, Date.now().toString());
-
-    // Redirigimos
     this.router.navigateByUrl(redirectUrl);
   }
-
 
   public clearLocalSession(): void {
     this._accessToken.set(null);
     localStorage.removeItem('token');
   }
 
-  role(): string | null {
+  public role(): string | null {
     const user = this.currentUser();
     if (!user) return null;
     return Array.isArray(user.roles) && user.roles.length > 0 ? user.roles[0] : null;
+  }
+
+  // ==================================================
+  // Utilidades de Token
+  // ==================================================
+
+  public isTokenExpired(): boolean {
+    const token = this.accessToken();
+    if (!token) return true;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expires = payload.exp * 1000;
+      // Margen de seguridad de 10 segundos
+      return (Date.now() + 10000) >= expires;
+    } catch {
+      return true;
+    }
   }
 
   private getInitialToken(): string | null {
@@ -161,6 +178,7 @@ export class AuthService {
       );
       const decoded = JSON.parse(jsonPayload) as UserTokenPayload;
       const roles = decoded.role ? (Array.isArray(decoded.role) ? decoded.role : [decoded.role]) : [];
+
       return {
         id: decoded.nameid ? parseInt(decoded.nameid, 10) : NaN,
         username: decoded.unique_name ?? '',
@@ -168,19 +186,6 @@ export class AuthService {
       };
     } catch {
       return { id: NaN, username: '', roles: [] };
-    }
-  }
-
-  public isTokenExpired(): boolean {
-    const token = this.accessToken();
-    if (!token) return true;
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const expires = payload.exp * 1000;
-      return (Date.now() + 10000) >= expires;
-    } catch {
-      return true;
     }
   }
 }

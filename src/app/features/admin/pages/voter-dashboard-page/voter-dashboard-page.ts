@@ -12,6 +12,7 @@ import { VotersTable } from './components/voters-table/voters-table';
   styleUrl: './voter-dashboard-page.css',
 })
 export class VoterDashboardPage {
+
   private npsService = inject(NpsService);
 
   // Estado centralizado para los hijos

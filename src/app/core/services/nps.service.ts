@@ -1,19 +1,20 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { catchError, map, Observable, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { catchError, map, Observable } from 'rxjs';
 import { NpsStatisticsResponse, VoterDto } from '../models/nps-model';
 import { environment } from '../../../environments/environment';
-import { ApiErrorItem, ApiResponse } from '../models/api-model';
-import { extractProblemErrors } from '../utils/problem-details-utils';
+import { ApiResponse } from '../models/api-model';
 import { handleApiError } from '../utils/api-utils';
 
 @Injectable({ providedIn: 'root' })
 export class NpsService {
   private readonly http = inject(HttpClient);
 
-  private get baseUrl() {
-    return `${environment.apiUrl}/api/nps`;
-  }
+  private readonly baseUrl = `${environment.apiUrl}/api/nps`;
+
+  // ==================================================
+  // Consultas de Datos
+  // ==================================================
 
   getStatistics(): Observable<ApiResponse<NpsStatisticsResponse>> {
     return this.http.get<ApiResponse<NpsStatisticsResponse>>(
@@ -21,10 +22,7 @@ export class NpsService {
       { withCredentials: true }
     ).pipe(
       map(res => res),
-      catchError((err: HttpErrorResponse) => {
-        const apiErrors: ApiErrorItem[] = extractProblemErrors(err.error);
-        return throwError(() => ({ original: err, apiErrors }));
-      })
+      catchError(handleApiError)
     );
   }
 

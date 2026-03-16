@@ -4,8 +4,6 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { CommonModule } from '@angular/common';
 import { NgxSpinnerService, NgxSpinnerModule } from 'ngx-spinner';
-import { ButtonComponent } from '../../../../shared/components/button-component/button-component';
-import { InputComponent } from '../../../../shared/components/input-component/input-component';
 
 @Component({
   selector: 'app-login-page',
@@ -13,15 +11,13 @@ import { InputComponent } from '../../../../shared/components/input-component/in
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    RouterLink,
-    NgxSpinnerModule,
-    InputComponent,
-    ButtonComponent
-  ],
+    NgxSpinnerModule
+],
   templateUrl: './login-page.html',
   styleUrl: './login-page.css',
 })
 export class LoginPage {
+
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
