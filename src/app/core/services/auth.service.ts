@@ -23,6 +23,7 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly baseUrl = `${environment.apiUrl}/api/auth`;
   private readonly TOKEN_KEY = 'auth_token';
+  private readonly LOGOUT_KEY = 'nps_logout_signal';
 
   private readonly _accessToken = signal<string | null>(this.getInitialToken());
 
@@ -113,19 +114,23 @@ export class AuthService {
     );
   }
 
-  logout(redirectTo: string = '/login') {
-    this.http.post(`${this.baseUrl}/logout`, {}, { withCredentials: true })
-      .pipe(
-        finalize(() => {
-          this._accessToken.set(null);
-          this.router.navigate([redirectTo]);
-        })
-      ).subscribe({
-        error: () => {
-          this._accessToken.set(null);
-          this.router.navigate([redirectTo]);
-        }
-      });
+  logout(redirectUrl: string = '/login'): void {
+    // Limpiamos los tokens
+    this._accessToken.set(null);
+    localStorage.removeItem('token');
+
+    // Emitimos la señal para las demás pestañas
+    // Siempre se dispara por el Timestampo
+    localStorage.setItem(this.LOGOUT_KEY, Date.now().toString());
+
+    // Redirigimos
+    this.router.navigateByUrl(redirectUrl);
+  }
+
+
+  public clearLocalSession(): void {
+    this._accessToken.set(null);
+    localStorage.removeItem('token');
   }
 
   role(): string | null {
@@ -170,8 +175,6 @@ export class AuthService {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const expires = payload.exp * 1000;
-      console.log(Date.now());
-      console.log(expires);
       return (Date.now() + 10000) >= expires;
     } catch {
       return true;

@@ -4,6 +4,8 @@ import { catchError, map, Observable, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiErrorItem, ApiResponse } from '../models/api-model';
 import { extractProblemErrors } from '../utils/problem-details-utils';
+import { handleApiError } from '../utils/api-utils';
+import { CreateVoteRequest, CreateVoteResponse, HasVotedResponse } from '../models/vote-model';
 
 @Injectable({ providedIn: 'root' })
 export class VoteService {
@@ -12,32 +14,26 @@ export class VoteService {
 
   public hasVoted = signal<boolean>(false);
 
-  createVote(score: number): Observable<void> {
-    return this.http.post<ApiResponse<number>>(
+  createVote(voteRequest: CreateVoteRequest): Observable<void> {
+    return this.http.post<ApiResponse<CreateVoteResponse>>(
       this.baseUrl,
-      { score },
+      voteRequest,
       { withCredentials: true }
     ).pipe(
       tap(() => this.hasVoted.set(true)),
       map(() => void 0),
-      catchError((err: HttpErrorResponse) => {
-        const apiErrors: ApiErrorItem[] = extractProblemErrors(err.error);
-        return throwError(() => ({ original: err, apiErrors }));
-      })
+      catchError(handleApiError)
     );
   }
 
   checkIfVoted(): Observable<void> {
-    return this.http.get<{ hasVoted: boolean }>(
+    return this.http.get<ApiResponse<HasVotedResponse>>(
       `${this.baseUrl}/has-voted`,
       { withCredentials: true }
     ).pipe(
-      tap(res => this.hasVoted.set(res.hasVoted)),
+      tap(res => this.hasVoted.set(res.data!.hasVoted)),
       map(() => void 0),
-      catchError((err: HttpErrorResponse) => {
-        const apiErrors: ApiErrorItem[] = extractProblemErrors(err.error);
-        return throwError(() => ({ original: err, apiErrors }));
-      })
+      catchError(handleApiError)
     );
   }
 

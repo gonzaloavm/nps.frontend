@@ -30,5 +30,6 @@ export class SessionTimeoutModal {
 
   onLogout(): void {
     this.authService.logout();
+    this.activityService.stop();
   }
 }

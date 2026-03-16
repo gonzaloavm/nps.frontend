@@ -1,0 +1,61 @@
+<div class="min-h-screen bg-slate-50/50 p-4 md:p-8">
+  <div class="max-w-6xl mx-auto space-y-12">
+
+    <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Panel de Gestión</h1>
+        <p class="text-slate-500 mt-1">Administra los accesos y monitorea la participación del NPS.</p>
+      </div>
+
+      <div class="flex items-center gap-2 text-sm font-medium text-slate-600 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+        </span>
+        Sincronizado con el Servidor
+      </div>
+    </header>
+
+    <section class="animate-in slide-in-from-top-4 duration-500">
+      <app-voter-registration (userCreated)="loadVoters()" />
+    </section>
+
+    <div class="relative py-4">
+      <div class="absolute inset-0 flex items-center" aria-hidden="true">
+        <div class="w-full border-t border-slate-200"></div>
+      </div>
+      <div class="relative flex justify-center">
+        <span class="bg-slate-50 px-3 text-slate-400">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </div>
+    </div>
+
+    <section class="space-y-4 animate-in slide-in-from-bottom-4 duration-500">
+      <div class="flex items-center justify-between px-1">
+        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+          Censo de Votantes
+          <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full">
+            {{ voters().length }} total
+          </span>
+        </h2>
+
+        <button
+          (click)="loadVoters()"
+          [disabled]="isLoading()"
+          class="text-sm font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <svg class="w-4 h-4" [class.animate-spin]="isLoading()" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refrescar lista
+        </button>
+      </div>
+
+      <app-voters-table [voters]="voters()" [isLoading]="isLoading()" />
+    </section>
+
+  </div>
+</div>

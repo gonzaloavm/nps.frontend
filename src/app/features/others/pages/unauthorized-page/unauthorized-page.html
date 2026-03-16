@@ -1,0 +1,26 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+    <div class="text-center">
+      <!-- Icono de candado o prohibición -->
+      <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 mb-4">
+        <svg class="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 11c1.104 0 2-.896 2-2V7a4 4 0 00-8 0v2c0 1.104.896 2 2 2h4zm-6 4h12v6H6v-6z" />
+        </svg>
+      </div>
+
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">
+        ¡Acceso no autorizado!
+      </h2>
+
+      <p class="text-gray-600 mb-6">
+        No tienes permisos para acceder a esta sección. Por favor inicia sesión con una cuenta válida que tenga permisos.
+      </p>
+
+      <button (click)="goToLogin()"
+              class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 ease-in-out transform hover:scale-105">
+        Regresar
+      </button>
+    </div>
+  </div>
+</div>

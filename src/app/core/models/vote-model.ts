@@ -1,8 +1,11 @@
 export interface CreateVoteRequest {
-  userId: number;
   score: number;
 }
 
 export interface CreateVoteResponse {
   voteId: number;
+}
+
+export interface HasVotedResponse{
+  hasVoted: boolean;
 }

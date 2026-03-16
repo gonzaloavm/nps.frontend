@@ -7,13 +7,21 @@ export const roleGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
 
   const user = authService.currentUser();
+  const token = authService.accessToken(); // Agregamos el check de token
   const expectedRole = route.data['role'];
 
-  if (user && user.roles.includes(expectedRole)) {
-    return true;
+  // 1. Si no hay token o el usuario es nulo, nos callamos.
+  // Devolvemos false pero NO redirigimos, porque el authGuard ya lo hizo.
+  if (!token || !user) {
+    return false;
   }
 
-  // Si no tiene el rol, lo mandamos a una página de "No autorizado" o al inicio
-  router.navigate(['/unauthorized']);
-  return false;
+  // 2. Si hay usuario pero NO tiene el rol, entonces SÍ es un tema de autorización
+  if (!user.roles.includes(expectedRole)) {
+    router.navigate(['/other/unauthorized']);
+    console.log("redirigio")
+    return false;
+  }
+
+  return true;
 };

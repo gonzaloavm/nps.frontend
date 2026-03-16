@@ -1,25 +1,42 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { VoteService } from '../../../../core/services/vote.service';
+import { CommonModule } from '@angular/common';
+import { AuthService } from '../../../../core/services/auth.service';
+import { ActivityService } from '../../../../core/services/activity.service';
 
 @Component({
   selector: 'app-vote-page',
-  imports: [],
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './vote-page.html',
-  styleUrl: './vote-page.css',
 })
-export class VotePage {
-  scores = Array.from({ length: 11 }, (_, i) => i); // 0..10
+export class VotePage implements OnInit {
+
+  private voteService = inject(VoteService);
+  private authService = inject(AuthService);
+  private activityService = inject(ActivityService);
+
+  scores = Array.from({ length: 11 }, (_, i) => i);
   selectedScore = signal<number | null>(null);
+
+  // Estados de control
+  isInitialLoading = signal(true);
+  isSubmitting = signal(false);
   alreadyVoted = signal(false);
   voteSubmitted = signal(false);
 
-  constructor(private voteService: VoteService, private router: Router) {}
-
   ngOnInit(): void {
+    // Validamos el estado apenas carga el componente
     this.voteService.checkIfVoted().subscribe({
-      next: () => this.alreadyVoted.set(this.voteService.hasVoted()),
-      error: () => this.alreadyVoted.set(false)
+      next: () => {
+        this.alreadyVoted.set(this.voteService.hasVoted());
+        this.isInitialLoading.set(false); // Liberamos la UI
+      },
+      error: () => {
+        this.alreadyVoted.set(false);
+        this.isInitialLoading.set(false);
+      }
     });
   }
 
@@ -29,24 +46,29 @@ export class VotePage {
 
   submitVote(): void {
     const score = this.selectedScore();
-    if (score === null) return;
+    if (score === null || this.isSubmitting()) return;
 
-    this.voteService.createVote(score).subscribe({
+    this.isSubmitting.set(true);
+
+    const voteRequest = { score }
+
+    this.voteService.createVote(voteRequest).subscribe({
       next: () => {
         this.voteSubmitted.set(true);
         this.alreadyVoted.set(true);
+        this.isSubmitting.set(false);
       },
       error: (err) => {
-        const apiErrors = err?.apiErrors ?? err?.original?.error?.errors ?? null;
-        const firstMessage = Array.isArray(apiErrors) && apiErrors.length > 0
-          ? apiErrors[0].message
-          : err?.original?.error?.detail ?? err?.message;
-        alert(firstMessage || 'Error al guardar voto');
+        this.isSubmitting.set(false);
+        const apiErrors = err?.apiErrors;
+        const message = apiErrors?.[0]?.message || 'Error al guardar el voto';
+        alert(message);
       }
     });
   }
 
   logout(): void {
-    this.router.navigate(['/login']);
+    this.activityService.stop();
+    this.authService.logout();
   }
 }
