@@ -1,17 +1,19 @@
 import { inject } from '@angular/core';
-import { Router, type CanActivateFn } from '@angular/router';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-export const roleGuard = (allowedRoles: Array<'Admin' | 'Voter'>): CanActivateFn => {
-  return () => {
-    const authService = inject(AuthService);
-    const router = inject(Router);
+export const roleGuard: CanActivateFn = (route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
 
-    const userRole = authService.role();
-    if (userRole && allowedRoles.includes(userRole as 'Admin' | 'Voter')) {
-      return true;
-    }
+  const user = authService.currentUser();
+  const expectedRole = route.data['role'];
 
-    return router.parseUrl('/login');
-  };
+  if (user && user.roles.includes(expectedRole)) {
+    return true;
+  }
+
+  // Si no tiene el rol, lo mandamos a una página de "No autorizado" o al inicio
+  router.navigate(['/unauthorized']);
+  return false;
 };

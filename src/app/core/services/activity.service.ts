@@ -1,141 +1,143 @@
-// src/app/core/services/activity.service.ts
-import { Injectable, signal, effect, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Injectable, signal, inject, effect, computed } from '@angular/core';
 import { AuthService } from './auth.service';
-import { firstValueFrom, isObservable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { allowSessionExpiredAccess } from '../guards/session-expired.guard';
 
 @Injectable({ providedIn: 'root' })
 export class ActivityService {
-  private readonly totalPeriod = 5 * 60 * 1000; // 5 minutos
-  private readonly warningAt = 60 * 1000; // mostrar aviso cuando quede 60s
-  private tickInterval = 1000;
+  private authService = inject(AuthService);
 
-  private countdownTimerId: any = null;
-  private timeoutId: any = null;
-  private warningTimeoutId: any = null;
-  private expiresAt: number | null = null;
+  // Timers
+  private refreshTimer: any = null;
+  private countdownInterval: any = null;
 
-  public remainingMs = signal<number>(this.totalPeriod);
+  // Configuración de Tiempos (1 minuto de sesión)
+  private readonly SESSION_DURATION_MS = 5 * 60 * 1000;
+  private readonly REFRESH_THRESHOLD_MS = 30 * 1000; // Refrescar JWT a la mitad de su vida
+  private readonly WARNING_THRESHOLD_MS = 30 * 1000; // Mostrar modal a los 30s de inactividad
+  private readonly TICK_INTERVAL = 1000;
+
+  // Signals de estado
   public isWarningVisible = signal<boolean>(false);
-  public isRunning = signal<boolean>(false);
   public isRefreshing = signal<boolean>(false);
 
-  private authService = inject(AuthService);
-  private router = inject(Router);
+  // El "Deadline" es el momento exacto donde la sesión muere (LastActivity + 1min)
+  private sessionDeadline = signal<number>(Date.now() + this.SESSION_DURATION_MS);
+
+  // Signal computada para que todo el sistema (Modal y Header) use el mismo valor
+  public remainingMs = signal<number>(0);
 
   constructor() {
     effect(() => {
-      this.remainingMs();
+      const token = this.authService.accessToken();
+      const hasValidToken = token && !this.authService.isTokenExpired();
+
+      if (hasValidToken) {
+        this.startTimers();
+      } else {
+        this.stopTimers();
+      }
     });
   }
 
-  start(): void {
-    if (this.isRunning()) return;
-    this.isRunning.set(true);
-    this.scheduleAll();
-  }
-
-  stop(): void {
-    this.clearAllTimers();
-    this.isRunning.set(false);
+  // Se llama desde el Interceptor en cada petición exitosa (Excepto Login/Refresh)
+  public updateActivity(): void {
+    const newDeadline = Date.now() + this.SESSION_DURATION_MS;
+    console.log('[ActivityService] updateActivity → nueva deadline:', newDeadline);
+    this.sessionDeadline.set(newDeadline);
     this.isWarningVisible.set(false);
-    this.expiresAt = null;
-    this.remainingMs.set(this.totalPeriod);
   }
 
-  restart(): void {
-    this.clearAllTimers();
+
+  private startTimers(): void {
+    this.stopTimers();
+    this.scheduleLogic();
+  }
+
+  public stop(): void {
+    this.stopTimers();
+  }
+
+  private stopTimers(): void {
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
+    if (this.countdownInterval) clearInterval(this.countdownInterval);
     this.isWarningVisible.set(false);
-    this.scheduleAll();
+    this.refreshTimer = null;
+    this.countdownInterval = null;
   }
 
-  updateActivity(): void {
-    // Llamado por el interceptor en cada petición HTTP para reiniciar el timer
-    if (!this.isRunning()) {
-      this.start();
-      return;
-    }
-    // Reiniciar sin cambiar isRunning
-    this.clearAllTimers();
-    this.scheduleAll();
-  }
+  private scheduleLogic(): void {
+    const exp = this.getTokenExpiration();
+    if (!exp) return;
 
-  private scheduleAll(): void {
+    // 1. Programar el Refresh técnico del JWT
     const now = Date.now();
-    this.expiresAt = now + this.totalPeriod;
-    this.remainingMs.set(this.totalPeriod);
+    const timeToRefresh = (exp - now) - this.REFRESH_THRESHOLD_MS;
 
-    const timeUntilWarning = this.expiresAt - this.warningAt - now;
-    this.warningTimeoutId = setTimeout(() => this.showWarning(), Math.max(0, timeUntilWarning));
+    console.log('[ActivityService] scheduleLogic → exp:', exp, 'timeToRefresh:', timeToRefresh);
 
-    const timeUntilLogout = this.expiresAt - now;
-    this.timeoutId = setTimeout(() => this.logoutDueToInactivity(), Math.max(0, timeUntilLogout));
+    if (timeToRefresh > 0) {
+      this.refreshTimer = setTimeout(() => this.refreshToken(), timeToRefresh);
+    } else {
+      this.refreshToken();
+    }
 
-    this.countdownTimerId = setInterval(() => {
-      const remaining = this.computeRemaining();
-      this.remainingMs.set(Math.max(0, remaining));
+    // 2. Intervalo de UI (Tick cada segundo)
+    this.countdownInterval = setInterval(() => {
+      // Calculamos el tiempo real restante
+      const remaining = Math.max(0, this.sessionDeadline() - Date.now());
 
-      console.log('Tiempo restante (ms):', remaining);
+      // Seteamos el valor para que la UI y el Header reaccionen
+      this.remainingMs.set(remaining);
 
-    }, this.tickInterval);
+      console.log('[ActivityService] Tick → remainingMs:', remaining);
+
+      if (remaining <= this.WARNING_THRESHOLD_MS && remaining > 0) {
+        this.isWarningVisible.set(true);
+      }
+
+      if (remaining <= 0) {
+        this.handleSessionExpired();
+      }
+    }, this.TICK_INTERVAL);
   }
 
-  private computeRemaining(): number {
-    if (!this.expiresAt) return this.totalPeriod;
-    return Math.max(0, this.expiresAt - Date.now());
-  }
 
-  private showWarning(): void {
-    this.isWarningVisible.set(true);
-    this.remainingMs.set(this.warningAt);
-  }
+  private async refreshToken(): Promise<void> {
+    // Si la sesión ya expiró en el front, no intentamos refrescar,
+    // dejamos que el sistema limpie todo.
+    if (this.isRefreshing() || this.remainingMs() <= 0) return;
 
-  async keepSession(): Promise<void> {
-    if (this.isRefreshing()) return;
     this.isRefreshing.set(true);
     try {
-      const result = this.authService.refreshSession();
-      if (isObservable(result)) {
-        await firstValueFrom(result);
-      } else {
-        await result;
-      }
-      this.restart();
-    } catch {
-      this.logoutDueToInactivity();
+      await firstValueFrom(this.authService.refreshSession());
+    } catch (error) {
+      this.handleSessionExpired();
     } finally {
       this.isRefreshing.set(false);
     }
   }
 
-  private logoutDueToInactivity(): void {
-    this.clearAllTimers();
-    this.isWarningVisible.set(false);
-    this.isRunning.set(false);
-    this.remainingMs.set(0);
-    this.expiresAt = null;
+  private getTokenExpiration(): number | null {
+    const token = this.authService.accessToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000;
+    } catch { return null; }
+  }
 
-    // Permitir acceso a la página de sesión expirada
+  private handleSessionExpired(): void {
+    this.stopTimers();
     allowSessionExpiredAccess();
-
-    // Hacer logout
     this.authService.logout('/other/session-expired');
   }
 
-
-  private clearAllTimers(): void {
-    if (this.countdownTimerId) {
-      clearInterval(this.countdownTimerId);
-      this.countdownTimerId = null;
-    }
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
-    if (this.warningTimeoutId) {
-      clearTimeout(this.warningTimeoutId);
-      this.warningTimeoutId = null;
-    }
+  // Método para el botón del Modal
+  public async keepSession(): Promise<void> {
+    // IMPORTANTE: Como tu middleware de C# ignora el endpoint de Refresh,
+    // necesitamos resetear el timer localmente aquí.
+    await this.refreshToken();
+    this.updateActivity();
   }
 }

@@ -1,9 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { NgxSpinnerComponent } from "ngx-spinner";
 import { Subscription, filter } from 'rxjs';
 import { ActivityService } from './core/services/activity.service';
 import { SessionTimeoutModal } from "./shared/components/session-timeout-modal/session-timeout-modal";
+import { AuthService } from './core/services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -11,11 +12,12 @@ import { SessionTimeoutModal } from "./shared/components/session-timeout-modal/s
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App {
+export class App implements OnInit {
   private routerSub?: Subscription;
 
   constructor(
-    private activity: ActivityService,
+    private activityService: ActivityService,
+    private authService: AuthService,
     private router: Router
   ) {}
 
@@ -31,25 +33,20 @@ export class App {
 
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
-    this.activity.stop();
+    this.activityService.stop();
   }
 
   private handleRoute(url: string): void {
     const path = url.split('?')[0].split('#')[0].toLowerCase();
-    const isLogin =
-    path === '/login' ||
-    path === '/auth/login' ||
-    path === '/signin';
+    const isPublic =
+      path === '/login' ||
+      path === '/auth/login' ||
+      path === '/signin' ||
+      path === '/other/session-expired';
 
-    const isSessionExpired = path === '/other/session-expired';
-
-    if (isLogin || isSessionExpired) {
-      this.activity.stop();
-    } else {
-      this.activity.start();
+    if (isPublic) {
+      this.activityService.stop();
     }
-
+    // No se llama a start() porque el ActivityService se activa automáticamente al tener token
   }
-
-
 }

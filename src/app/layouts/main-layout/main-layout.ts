@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { AuthService } from '../../core/services/auth.service';
 import { UpperCasePipe } from '@angular/common';
 import { RouterLink, RouterOutlet } from '@angular/router';
@@ -15,7 +15,30 @@ export class MainLayout {
   isProfileOpen = signal(false);
 
   public readonly authService = inject(AuthService);
-  private readonly activityService = inject(ActivityService)
+  private readonly activityService = inject(ActivityService);
+
+  constructor() {
+    this.checkSessionStatus();
+  }
+
+  private checkSessionStatus() {
+    if (this.authService.accessToken()) {
+      this.authService.verifySession().subscribe({
+        next: () => console.log('[System] Sesión sincronizada al iniciar pestaña'),
+        error: () => this.authService.logout()
+      });
+    }
+  }
+
+  // Tiempo formateado como mm:ss
+  formattedTime = computed(() => {
+    const ms = this.activityService.remainingMs();
+    if (ms <= 0) return '0:00';
+    const totalSeconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  });
 
   toggleSidebar() {
     this.isSidebarOpen.set(!this.isSidebarOpen());
@@ -30,7 +53,7 @@ export class MainLayout {
     this.isProfileOpen.set(false);
   }
 
-  logout(){
+  logout() {
     this.authService.logout();
     this.activityService.stop();
   }

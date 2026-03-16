@@ -101,6 +101,18 @@ export class AuthService {
     );
   }
 
+  verifySession(): Observable<ApiResponse<boolean>> {
+    // Agregamos un parámetro aleatorio para que el navegador no cachee el GET
+    const cacheBuster = new Date().getTime();
+
+    return this.http.get<ApiResponse<boolean>>(
+      `${this.baseUrl}/verify-session?t=${cacheBuster}`,
+      { withCredentials: true }
+    ).pipe(
+      catchError(handleApiError)
+    );
+  }
+
   logout(redirectTo: string = '/login') {
     this.http.post(`${this.baseUrl}/logout`, {}, { withCredentials: true })
       .pipe(
@@ -158,6 +170,8 @@ export class AuthService {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const expires = payload.exp * 1000;
+      console.log(Date.now());
+      console.log(expires);
       return (Date.now() + 10000) >= expires;
     } catch {
       return true;
