@@ -1,11 +1,16 @@
 #!/bin/sh
-# Creamos la carpeta assets por si no existe en el build de producción
+
+# 1. Crear la carpeta assets si no existe (por si acaso)
 mkdir -p /usr/share/nginx/html/assets
 
-# Creamos el JSON con la variable de entorno que viene de Docker
-echo "{\"apiUrl\": \"$API_URL\"}" > /usr/share/nginx/html/assets/config.json
+# 2. Generar el config.json con la variable de entorno de Docker
+cat <<EOF > /usr/share/nginx/html/assets/config.json
+{
+  "apiUrl": "${API_URL}"
+}
+EOF
 
-echo "Config.json generado con URL: $API_URL"
+echo "Configuración generada con API_URL: ${API_URL}"
 
-# Iniciamos Nginx
+# 3. Arrancar Nginx
 nginx -g "daemon off;"
